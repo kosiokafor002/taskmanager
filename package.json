@@ -8,5 +8,8 @@
     "server": "npm run dev --prefix server",
     "client": "npm run dev --prefix client",
     "build": "npm run build --prefix client"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0"
   }
 }
