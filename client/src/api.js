@@ -24,7 +24,6 @@ async function request(path, options = {}, { auth = false } = {}) {
   });
 
   if (response.status === 401 && auth) {
-    // Token is missing/expired/invalid - clear it and let AuthContext react.
     localStorage.removeItem(TOKEN_KEY);
     window.dispatchEvent(new Event('auth:logout'));
   }
@@ -58,33 +57,37 @@ export function updateProfile(payload) {
   return request('/auth/profile', { method: 'PUT', body: JSON.stringify(payload) }, { auth: true });
 }
 
-// Tasks (all scoped to the logged-in user on the server)
+// Tasks (active only)
 export function getTasks() {
   return request('/tasks', { method: 'GET' }, { auth: true });
 }
 
 export function createTask(task) {
-  return request(
-    '/tasks',
-    {
-      method: 'POST',
-      body: JSON.stringify(task)
-    },
-    { auth: true }
-  );
+  return request('/tasks', { method: 'POST', body: JSON.stringify(task) }, { auth: true });
 }
 
 export function updateTask(id, task) {
-  return request(
-    `/tasks/${id}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify(task)
-    },
-    { auth: true }
-  );
+  return request(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify(task) }, { auth: true });
 }
 
+// Soft delete — moves task to trash
 export function deleteTask(id) {
   return request(`/tasks/${id}`, { method: 'DELETE' }, { auth: true });
+}
+
+// Trash
+export function getTrashedTasks() {
+  return request('/tasks/trash', { method: 'GET' }, { auth: true });
+}
+
+export function restoreTask(id) {
+  return request(`/tasks/${id}/restore`, { method: 'PATCH' }, { auth: true });
+}
+
+export function permanentlyDeleteTask(id) {
+  return request(`/tasks/${id}/permanent`, { method: 'DELETE' }, { auth: true });
+}
+
+export function emptyTrash() {
+  return request('/tasks/trash/empty', { method: 'DELETE' }, { auth: true });
 }

@@ -21,6 +21,9 @@ export default function Navbar() {
 
         <nav className="navbar-links">
           <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Tasks</NavLink>
+          <NavLink to="/trash" className={({ isActive }) => isActive ? 'active' : ''}>
+            🗑 Trash
+          </NavLink>
           <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''}>Profile</NavLink>
         </nav>
 

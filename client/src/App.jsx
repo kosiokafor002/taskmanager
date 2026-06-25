@@ -6,6 +6,7 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Tasks from './pages/Tasks.jsx';
 import Profile from './pages/Profile.jsx';
+import Trash from './pages/Trash.jsx';
 
 function Shell() {
   const { isAuthenticated, loading } = useAuth();
@@ -24,6 +25,7 @@ function Shell() {
         />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Tasks />} />
+          <Route path="/trash" element={<Trash />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
