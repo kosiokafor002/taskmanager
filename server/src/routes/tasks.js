@@ -44,15 +44,34 @@ function handleTaskError(error, res) {
 // so a user can only ever see, edit, or delete their own tasks.
 router.use(requireDatabase, verifyToken);
 
+// GET /tasks — list all active (non-deleted) tasks
 router.get('/', async (req, res) => {
   try {
-    const tasks = await Task.find({ userId: req.user.id }).sort({ dueDate: 1, createdAt: -1 });
+    const tasks = await Task.find({ userId: req.user.id, deletedAt: null }).sort({
+      dueDate: 1,
+      createdAt: -1
+    });
     res.status(200).json(tasks);
   } catch (error) {
     handleTaskError(error, res);
   }
 });
 
+// GET /tasks/trash — list all soft-deleted tasks
+router.get('/trash', async (req, res) => {
+  try {
+    const tasks = await Task.find({
+      userId: req.user.id,
+      deletedAt: { $ne: null }
+    }).sort({ deletedAt: -1 });
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    handleTaskError(error, res);
+  }
+});
+
+// POST /tasks — create a new task
 router.post('/', async (req, res) => {
   try {
     const task = await Task.create({ ...taskPayload(req.body), userId: req.user.id });
@@ -62,10 +81,11 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT /tasks/:id — update an active task
 router.put('/:id', async (req, res) => {
   try {
     const task = await Task.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
+      { _id: req.params.id, userId: req.user.id, deletedAt: null },
       taskPayload(req.body),
       {
         new: true,
@@ -83,15 +103,72 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// DELETE /tasks/:id — soft delete: move task to trash
 router.delete('/:id', async (req, res) => {
   try {
-    const task = await Task.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id, deletedAt: null },
+      { deletedAt: new Date() },
+      { new: true }
+    );
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
 
+    return res.status(200).json({ message: 'Task moved to trash', task });
+  } catch (error) {
+    return handleTaskError(error, res);
+  }
+});
+
+// PATCH /tasks/:id/restore — restore a task from trash
+router.patch('/:id/restore', async (req, res) => {
+  try {
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id, deletedAt: { $ne: null } },
+      { deletedAt: null },
+      { new: true }
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found in trash' });
+    }
+
+    return res.status(200).json({ message: 'Task restored successfully', task });
+  } catch (error) {
+    return handleTaskError(error, res);
+  }
+});
+
+// DELETE /tasks/:id/permanent — permanently delete a trashed task
+router.delete('/:id/permanent', async (req, res) => {
+  try {
+    const task = await Task.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+      deletedAt: { $ne: null }
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found in trash' });
+    }
+
     return res.status(204).send();
+  } catch (error) {
+    return handleTaskError(error, res);
+  }
+});
+
+// DELETE /tasks/trash/empty — permanently delete ALL trashed tasks for this user
+router.delete('/trash/empty', async (req, res) => {
+  try {
+    const result = await Task.deleteMany({
+      userId: req.user.id,
+      deletedAt: { $ne: null }
+    });
+
+    return res.status(200).json({ message: `Emptied trash (${result.deletedCount} tasks deleted)` });
   } catch (error) {
     return handleTaskError(error, res);
   }
