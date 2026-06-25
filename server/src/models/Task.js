@@ -26,6 +26,8 @@ const taskSchema = new mongoose.Schema(
       required: [true, 'Due date is required'],
       validate: {
         validator(value) {
+          // Skip past-date validation for soft-deleted tasks being restored
+          if (this.deletedAt) return true;
           return value >= startOfToday();
         },
         message: 'Due date cannot be in the past'
@@ -48,12 +50,23 @@ const taskSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
       index: true
+    },
+    // Soft delete fields
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true
     }
   },
   {
     timestamps: true
   }
 );
+
+// Convenience virtual: is the task currently in the trash?
+taskSchema.virtual('isTrashed').get(function () {
+  return this.deletedAt !== null;
+});
 
 export { categories };
 export default mongoose.model('Task', taskSchema);
